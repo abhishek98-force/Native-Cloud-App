@@ -1,0 +1,67 @@
+name: packer
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  PRODUCT_VERSION: "1.8.6" # or: "latest"
+
+jobs:
+  packer:
+    runs-on: ubuntu-latest
+    name: Run Packer
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup `packer`
+        uses: hashicorp/setup-packer@main
+        with:
+          packer_version: 1.10.1 
+        
+      - name: Setup env variable
+        run: |
+              cd packer
+              echo '${{ secrets.IAM_KEY }}' | base64 --decode | jq > dev-img-0b1250fc5338.json    
+
+      - name: Create zip file
+        run: |
+          zip -r webappzip.zip ./config \
+          ./migrations \
+          ./models \
+          ./packer \
+          ./src \
+          ./package-lock.json \
+          ./package.json \
+          ./server.js
+          ls -al
+
+
+      - name: Debug print credentials file
+        run: cat ./packer/dev-img-0b1250fc5338.json
+      
+      - name: Run `packer init`
+        id: init
+        run: |
+            cd ./packer    
+            packer init ./centosdemo.pkr.hcl
+
+      - name: Run `packer validate`
+        id: validate
+        run: |
+            cd ./packer
+            packer validate ./centosdemo.pkr.hcl 
+
+      - name: Run `packer format`
+        id: fomrmat
+        run: |
+            cd ./packer 
+            packer fmt -check .
+
+  
+
+            
+    
